@@ -94,3 +94,35 @@ CREATE INDEX IF NOT EXISTS idx_chapters_book   ON chapters(book_id, no);
 CREATE INDEX IF NOT EXISTS idx_kps_chapter     ON kps(chapter_id);
 CREATE INDEX IF NOT EXISTS idx_exam_kp         ON exam_stats(kp_id);
 CREATE INDEX IF NOT EXISTS idx_attempt_session ON attempts(session_id);
+
+-- ---------------------------------------------------------------------------
+-- v2（AI #03）：内容层不依赖"下载教材 PDF"，改为联网检索 + 落盘缓存
+--
+-- 原因：真实场景里不可能为每门课、每个版本都备一份教材；而且教材有版权。
+-- 骨架（chapters/kps）来自通用章节表 + 真题反推，与具体教材解耦；
+-- 讲解内容按需从网上抓，抓到的结果落盘并标注来源，同一知识点只抓一次。
+--
+-- 代价（写进技术文档）：内容质量取决于来源，必须存 url + trust 才能追溯；
+-- 首次访问有延迟，所以要有缓存命中率指标。
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS sources (
+    id         INTEGER PRIMARY KEY,
+    url        TEXT UNIQUE NOT NULL,
+    domain     TEXT,
+    title      TEXT,
+    kind       TEXT,                      -- textbook/baike/wiki/lecture
+    trust      REAL NOT NULL DEFAULT 0.5, -- 人工或规则给出的可信度 0..1
+    fetched_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS contents (
+    id         INTEGER PRIMARY KEY,
+    kp_id      INTEGER NOT NULL REFERENCES kps(id) ON DELETE CASCADE,
+    source_id  INTEGER REFERENCES sources(id) ON DELETE SET NULL,
+    text       TEXT NOT NULL,             -- 抽取后的"3 句话讲解 + 1 个例子"
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (kp_id, source_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_contents_kp ON contents(kp_id);
