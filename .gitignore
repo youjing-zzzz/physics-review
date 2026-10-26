@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# 运行时数据
+*.db
+*.db-wal
+*.db-shm
+data/raw/
+data/ocr-cache/
+
+# 密钥
+.env
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Node（后续前端）
+node_modules/
+.next/

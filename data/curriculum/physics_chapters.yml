@@ -1,0 +1,38 @@
+# 大学物理常见章节表（教材无关的“通用骨架”）
+#
+# 用途：当用户拍照的目录与教材版次对不上时，用这份骨架做中间层对齐。
+# 状态：待与具体教材核对。解析教材 PDF 后，以解析结果为准，本表仅作兜底。
+# 依据：马文蔚《物理学》与程守洙《普通物理学》的公共章节顺序（两本主流教材结构接近）。
+
+subject: 大学物理
+version: 0.1
+status: 待核对
+
+modules:
+  - name: 力学
+    chapters:
+      - {no: 1, title: 质点运动学}
+      - {no: 2, title: 牛顿定律}
+      - {no: 3, title: 动量守恒定律和能量守恒定律}
+      - {no: 4, title: 刚体的转动}
+  - name: 电磁学
+    chapters:
+      - {no: 5, title: 静电场}
+      - {no: 6, title: 静电场中的导体和电介质}
+      - {no: 7, title: 恒定磁场}
+      - {no: 8, title: 电磁感应 电磁场}
+  - name: 振动与波
+    chapters:
+      - {no: 9, title: 振动}
+      - {no: 10, title: 波动}
+  - name: 光学
+    chapters:
+      - {no: 11, title: 光学}
+  - name: 热学
+    chapters:
+      - {no: 12, title: 气体动理论}
+      - {no: 13, title: 热力学基础}
+  - name: 近代物理
+    chapters:
+      - {no: 14, title: 相对论}
+      - {no: 15, title: 量子物理}
