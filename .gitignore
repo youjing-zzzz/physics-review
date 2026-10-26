@@ -11,6 +11,11 @@ venv/
 *.db-shm
 data/raw/
 data/ocr-cache/
+data/parsed/
+
+# 本地依赖与临时目录
+pylibs/
+.tmp/
 
 # 密钥
 .env
