@@ -33,13 +33,15 @@ OCR_SCRIPT = ROOT / "scripts" / "ocr_windows.ps1"
 UPLOADS = ROOT / "data" / "ocr-cache" / "uploads"
 
 
-class AnalyzeIn(BaseModel):
-    text: str
-    profile: str = "tier2_normal"
+if FastAPI:
+
+    class AnalyzeIn(BaseModel):
+        text: str
+        profile: str = "normal"
 
 
 def _analyze(text: str, profile_key: str) -> dict:
-    profile = PROFILES.get(profile_key) or PROFILES["tier2_normal"]
+    profile = PROFILES.get(profile_key) or PROFILES["normal"]
     tree = toc.parse(text)
     guess = course_mod.detect(tree["nodes"])
 
@@ -57,14 +59,24 @@ def _analyze(text: str, profile_key: str) -> dict:
             "depth_cap": profile.depth_cap,
             "allow_proof": profile.allow_proof,
             "weight_bias": profile.weight_bias,
+            "tier_shift": profile.tier_shift,
         },
     )
 
+    lines = [ln for ln in text.splitlines() if ln.strip()]
     return {
         "tree": tree,
         "course": guess,
         "kps": [k.to_dict() for k in kps],
         "tiers": tiered,
+        # 诊断信息：解析出 0 个节点时，让用户能立刻看出是"图没识别好"还是"格式不是目录"
+        "diagnostics": {
+            "lines": len(lines),
+            "considered": tree["considered"],
+            "matched": tree["matched"],
+            "head": lines[:3],
+            "hint": "" if tree["nodes"] else "没有识别到带编号的目录行，请检查图片是否清晰、是否真的是目录页",
+        },
     }
 
 

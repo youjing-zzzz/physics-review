@@ -68,8 +68,9 @@
       <div>
         <label>③ 学校档位</label>
         <select id="profile">
-          <option value="tier2_normal">普通本科</option>
-          <option value="tier1_985">985 / 双一流</option>
+          <option value="normal">一档 · 普通本科</option>
+          <option value="211">二档 · 211</option>
+          <option value="985">三档 · 985</option>
         </select>
       </div>
     </div>
@@ -166,14 +167,18 @@ function render(data) {
        <span class="hint">${c.reason}｜候选：${c.candidates.map(x => x.name).join("、") || "无"}</span>`;
 
   const cov = data.tree.coverage;
+  const dg = data.diagnostics || {};
   const covBadge = cov >= 0.4
     ? `<span class="badge ok">目录识别 ${(cov * 100).toFixed(0)}%</span>`
     : `<span class="badge warn">目录识别仅 ${(cov * 100).toFixed(0)}%，建议手改文本</span>`;
+  const diagLine = `<div class="hint">读到 ${dg.lines || 0} 行，其中 ${dg.matched || 0} 行像目录
+      ${dg.hint ? `｜<span style="color:var(--warn)">${dg.hint}</span>` : ""}</div>`;
 
   $("result").innerHTML = `
     <div>${courseLine}</div>
     <div style="margin-top:8px">${covBadge}
       <span class="hint">共 ${data.kps.length} 个知识点</span></div>
+    ${diagLine}
     <div class="tabs" id="tabs"></div>
     <div id="list"></div>
     <details style="margin-top:12px">
