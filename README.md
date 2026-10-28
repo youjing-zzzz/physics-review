@@ -21,6 +21,30 @@
 | 深度 | 无约束 | 由 `depth_cap` 硬约束 |
 | 个性化 | 无 | 目标分数 + 学校画像 |
 
+## 和同类项目的区别
+
+| | DeepTutor | 女娲补天（nuwa-mends-the-sky） | 本项目 |
+|---|---|---|---|
+| 前置条件 | 要自己整理文档 | **必须有课程材料**（PPT/讲义/教材/作业/题库至少一样） | **一张照片** |
+| 核心动作 | 讲解、陪练、追踪掌握度 | 建骨架 → 压缩 → 自测 → 回补（全量覆盖） | **按分数线裁剪** |
+| 输出 | 学习过程 | 一份完整复习包 | 三份**不等**的清单 |
+| 个性化维度 | 学习历史 | 材料差异 | 目标分数 × 学校难度 × 剩余天数 |
+| 形态 | 自托管 Web | Codex skill | 网页 |
+
+一句话：**它们解决「怎么学会」，本项目解决「哪些不用学」。**
+
+借鉴自同类项目的两条原则（写进设计）：
+
+1. **低置信信息进 `to-confirm`，不默默合并** —— 照片定位不准时必须让用户确认。
+2. **外部资料只能补骨架或解释，不能替代老师材料** —— 联网检索是补充，不是真相来源。
+
+## 核心技术难点
+
+| 难点 | 做法 |
+|---|---|
+| 一张照片 → 章节 | 双路：OCR 抓章节号/标题做模糊匹配 + 视觉检测荧光笔/下划线定位被标记行 |
+| 搜到的资料 → 个人化 | 四参数（目标分/学校/剩余天数/每日时长）+ 三段结构（定义/必考题型/常见错误）+ `depth_cap` 截断 |
+
 ## 核心流程
 
 ```
@@ -60,14 +84,34 @@ docs/
 
 ## 快速开始
 
+**Windows 一键（推荐）**
+
+```powershell
+powershell -File scripts/bootstrap.ps1
+```
+
+**手动**
+
 ```bash
-python -m venv .venv
-.venv\Scripts\activate
 pip install -r backend/requirements.txt
-python -m backend.app.main          # 或 uvicorn backend.app.main:app --reload
+python scripts/check_db.py
+python -m uvicorn backend.app.main:app --port 8000
 ```
 
 健康检查：`GET http://127.0.0.1:8000/health`
+
+**每天收工（保持细粒度提交历史）**
+
+```powershell
+powershell -File scripts/daily_push.ps1
+```
+
+首次使用需配一次远端与代理：
+
+```bash
+git remote add origin https://github.com/<用户名>/<仓库名>.git
+git config --global http.proxy http://127.0.0.1:7897
+```
 
 ## 当前进度
 
