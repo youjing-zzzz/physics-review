@@ -85,6 +85,12 @@ CHAPTER_KEYWORDS: dict[str, tuple[str, dict[str, float]]] = {
 # 低于这个置信度就交给用户确认，不硬下结论
 CONFIRM_THRESHOLD = 0.45
 
+# 绝对下限（惨痛教训）：只看比例会被"全篇只命中一个弱词"骗到 1.0。
+# 真实反例：一份《数值分析》目录因为出现"牛顿迭代法"，被以置信度 1.0 判成物理第 2 章。
+# 所以除了比例，还要求绝对得分与命中词数同时达标。
+MIN_SCORE = 3.0
+MIN_KEYWORDS = 2
+
 
 @dataclass
 class ChapterHit:
@@ -134,11 +140,22 @@ def locate(text: str, top: int = 3) -> dict:
         for h in scored[:top]
     ]
     best = candidates[0]
-    status = "confident" if best["confidence"] >= CONFIRM_THRESHOLD else "confirm"
+
+    # 三档判定：证据不足 → unknown；证据够但分散 → confirm；集中且够强 → confident
+    if best["score"] < MIN_SCORE or len(best["hits"]) < MIN_KEYWORDS:
+        return {
+            "status": "unknown",
+            "reason": "命中太少，可能不属于本课程（或这张图不是目录页）",
+            "best": None,
+            "candidates": candidates,
+        }
+
+    if best["confidence"] >= CONFIRM_THRESHOLD:
+        return {"status": "confident", "reason": "", "best": best, "candidates": candidates}
 
     return {
-        "status": status,
-        "reason": "" if status == "confident" else "命中分散，建议让用户确认章节",
+        "status": "confirm",
+        "reason": "命中分散或不够强，建议让用户确认章节",
         "best": best,
         "candidates": candidates,
     }
