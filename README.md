@@ -102,9 +102,14 @@ python -m uvicorn backend.app.main:app --port 8000
 
 **每天收工（保持细粒度提交历史）**
 
+双击 `scripts/push.bat`，或执行：
+
 ```powershell
-powershell -File scripts/daily_push.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/daily_push.ps1
 ```
+
+> Windows 默认禁止运行 .ps1（`Restricted` 策略），所以必须带 `-ExecutionPolicy Bypass`，
+> 或者直接用 `push.bat` / `ocr.bat` 这些封装好的入口。
 
 首次使用需配一次远端与代理：
 
@@ -116,17 +121,30 @@ git config --global http.proxy http://127.0.0.1:7897
 ## 当前进度
 
 - [x] D1 项目骨架 / 数据模型 / SQLite schema
-- [ ] D2 教材解析：目录 → 章节 → 页码
-- [ ] D3 知识点切块入库
-- [ ] D4 分层打分算法 + 单测
-- [x] D5 拍照 → OCR → 章节树（Windows 自带 OCR，见 `docs/prompts/05`）
-- [ ] D6 三档计划 API
+- [x] D2 真题抽取（文字层 + 扫描件识别，标记 needs_ocr）
+- [x] D3 知识点入库（`chapters` / `kps` / `ingest`）
+- [x] D4 分层打分：类型先验 + 深度硬约束（`tiering.py`）
+- [x] D5 拍照 → OCR → 章节树（Windows 自带 OCR + 目录解析）
+- [x] D6 三档计划 API（`/api/analyze`）
 - [ ] D7 检测题 + 判分
-- [ ] D8 前端单页
+- [x] D8 前端单页（上传 / 手改 / 三档 tab / 诊断）
 - [ ] D9 错题回退
-- [ ] D10 评测集
-- [ ] D11 论文翻译 + README 复现
+- [ ] D10 评测集（真实照片回归）
+- [ ] D11 教材对齐 + README 复现
 - [ ] D12 视频 / 技术文档
+
+**已具备的能力模块**
+
+| 模块 | 作用 |
+|---|---|
+| `toc.py` | 目录解析（编号/第X章/第X节/无编号兜底） |
+| `course.py` | 科目判定（5 门课指纹，双下限防误判） |
+| `kp_extract.py` | 章节标题 → 知识点类型/深度/认知成本 |
+| `tiering.py` | 三档裁剪（普通本科 / 211 / 985） |
+| `resources.py` | 学校 + 课程 → 官方培养方案/大纲探测 |
+| `match.py` | 目录指纹匹配（容忍 OCR 错字与版本差异） |
+| `books.py` | 豆瓣书目元数据（书名 / ISBN / 出版社） |
+| `retrieval.py` | 维基百科补讲解（含领域词校验，仅作参考） |
 
 ## 比赛材料
 
