@@ -24,7 +24,7 @@ except ImportError:  # 允许没装依赖时做静态检查
     FastAPI = None  # type: ignore[assignment]
 
 from . import course as course_mod
-from . import db, kp_extract, tiering, toc
+from . import db, kp_extract, retrieval, tiering, toc
 from .schema import PROFILES, Tier
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -38,9 +38,41 @@ if FastAPI:
     class AnalyzeIn(BaseModel):
         text: str
         profile: str = "normal"
+        enrich: bool = True      # 是否联网补"这个知识点讲什么"
+        enrich_limit: int = 6    # 每次最多补几个，控制演示耗时
 
 
-def _analyze(text: str, profile_key: str) -> dict:
+def _attach_content(tiered: dict, kps: list[dict], limit: int) -> dict:
+    """给 50 分档的前若干个知识点补联网摘要。
+
+    只补 50 档：那是"保底必须学"的部分，也是用户第一眼要看的。
+    超时或查不到就留空，绝不编内容。
+    """
+    name_by_code = {k["code"]: k["name"] for k in kps}
+    targets = [i["code"] for i in tiered["tiers"]["50"]["items"]][:limit]
+    found: dict[str, dict] = {}
+    for code in targets:
+        name = name_by_code.get(code)
+        if not name:
+            continue
+        found[code] = retrieval.enrich(name)
+
+    for tier in tiered["tiers"].values():
+        for item in tier["items"]:
+            hit = found.get(item["code"])
+            if hit:
+                item["content"] = hit.get("text", "")
+                item["source"] = hit.get("url", "")
+                item["content_status"] = hit.get("status", "")
+
+    return {
+        "attempted": len(targets),
+        "ok": sum(1 for v in found.values() if v.get("status") == "ok"),
+        "failed": [v["term"] for v in found.values() if v.get("status") != "ok"],
+    }
+
+
+def _analyze(text: str, profile_key: str, enrich: bool = False, enrich_limit: int = 6) -> dict:
     profile = PROFILES.get(profile_key) or PROFILES["normal"]
     tree = toc.parse(text)
     guess = course_mod.detect(tree["nodes"])
@@ -62,6 +94,11 @@ def _analyze(text: str, profile_key: str) -> dict:
             "tier_shift": profile.tier_shift,
         },
     )
+
+    kp_dicts = [k.to_dict() for k in kps]
+    enrichment = None
+    if enrich and kp_dicts:
+        enrichment = _attach_content(tiered, kp_dicts, max(0, min(enrich_limit, 12)))
 
     lines = [ln for ln in text.splitlines() if ln.strip()]
     avg_len = (sum(len(ln) for ln in lines) / len(lines)) if lines else 0
@@ -85,6 +122,7 @@ def _analyze(text: str, profile_key: str) -> dict:
         "course": guess,
         "kps": [k.to_dict() for k in kps],
         "tiers": tiered,
+        "enrichment": enrichment,
         # 诊断信息：解析出 0 个节点时，让用户能立刻看出是"图没识别好"还是"格式不是目录"
         "diagnostics": {
             "lines": len(lines),
@@ -137,7 +175,7 @@ def _build_app() -> None:
         if not body.text.strip():
             return JSONResponse({"error": "文本为空"}, status_code=400)
         try:
-            return JSONResponse(_analyze(body.text, body.profile))
+            return JSONResponse(_analyze(body.text, body.profile, body.enrich, body.enrich_limit))
         except Exception as exc:  # 解析失败要给出人能看懂的原因
             return JSONResponse({"error": f"分析失败：{exc}"}, status_code=500)
 

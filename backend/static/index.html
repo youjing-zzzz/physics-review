@@ -47,6 +47,10 @@
   .tree{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--dim);
         max-height:220px;overflow:auto;white-space:pre}
   .err{color:var(--bad);font-size:13px;margin-top:8px}
+  .content{margin-top:6px;padding:8px 10px;border-left:2px solid var(--accent);
+           background:#0f1319;color:#c7ccd6;font-size:12px;border-radius:0 6px 6px 0}
+  .content a{color:var(--accent);margin-left:6px;font-size:11px}
+  .warnflag{color:var(--warn);margin-left:6px;font-size:11px}
 </style>
 </head>
 <body>
@@ -212,6 +216,10 @@ function render(data) {
             ${i.new_in_this_tier ? `<span class="new">＋本档新增</span>` : ""}
             <div class="meta">${i.type}｜深度 ${i.depth}｜约 ${i.cost_min} 分钟｜
               分数 ${i.score}（${i.basis}）</div>
+            ${i.content ? `<div class="content">${i.content}
+              ${i.source ? `<a href="${i.source}" target="_blank" rel="noopener">来源</a>` : ""}
+              ${i.content_status === "weak_match" ? `<span class="warnflag">可能不是教材口径</span>` : ""}
+              </div>` : ""}
           </li>`).join("")}</ul>`;
   };
 
