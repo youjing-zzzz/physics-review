@@ -1,0 +1,55 @@
+# 学校 → 资料源种子表
+#
+# 设计原则：
+# 1. 只放**官方/半官方**入口（学校、学院、教务处），可信度高、结构相对稳定。
+# 2. 找不到的学校不编，走 default_sources 的通用兜底（搜索式），并标注低可信度。
+# 3. 每个源都写 kind 和 trust，输出时必须显示——用户要能判断"这条资料能不能信"。
+
+schools:
+  - name: 西安科技大学
+    aliases: [西科大, xust, 西安科技]
+    sources:
+      - name: 理学院 · 培养方案
+        url: https://lxy.xust.edu.cn/bkjy/pyfa/sxyyysxzy.htm
+        kind: curriculum
+        trust: 0.9
+        note: 数学与应用数学专业培养方案，含课程与教材信息
+      - name: 理学院 · 课程建设
+        url: https://lxy.xust.edu.cn/bkjy/kcjs.htm
+        kind: syllabus
+        trust: 0.8
+      - name: 教务处
+        url: https://jwc.xust.edu.cn/
+        kind: portal
+        trust: 0.85
+
+# 通用兜底：任何学校都能试，但只能当"线索"，不能当依据
+default_sources:
+  - name: 站内搜索 · 教学大纲
+    url: "https://www.bing.com/search?q={school}+{course}+教学大纲+教材"
+    kind: search
+    trust: 0.45
+  - name: 站内搜索 · 培养方案
+    url: "https://www.bing.com/search?q={school}+{course}+培养方案"
+    kind: search
+    trust: 0.45
+  - name: 中国大学MOOC
+    url: "https://www.icourse163.org/search.htm?search={course}"
+    kind: mooc
+    trust: 0.55
+
+# 从页面文本里抽"指定教材"的线索词
+textbook_hints:
+  - 教材
+  - 参考书
+  - 主要参考
+  - 推荐教材
+  - 使用教材
+
+# 判断页面是否与课程相关
+course_keywords:
+  - 教学大纲
+  - 培养方案
+  - 课程
+  - 学时
+  - 学分

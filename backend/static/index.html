@@ -82,6 +82,14 @@
     <label style="margin-top:12px">④ 生成</label>
     <button id="go">生成三档复习清单</button>
     <button id="demo" class="ghost" style="margin-top:8px">载入示例（数值分析目录）</button>
+
+    <label style="margin-top:14px">⑤ 查资料源（学校 + 课程 → 官方培养方案/教学大纲）</label>
+    <div class="row">
+      <input id="school" placeholder="学校名" value="西安科技大学" />
+      <input id="course" placeholder="课程名" value="数值分析" />
+    </div>
+    <button id="findSrc" class="ghost" style="margin-top:8px">查资料源</button>
+    <div id="srcBox"></div>
     <div class="err" id="err"></div>
   </section>
 
@@ -129,6 +137,38 @@ $("file").onchange = async (e) => {
   } catch (err) {
     $("ocrHint").textContent = "识别失败，可以手动粘贴文本";
     $("err").textContent = err.message;
+  }
+};
+
+$("findSrc").onclick = async () => {
+  const school = $("school").value.trim();
+  const course = $("course").value.trim();
+  $("srcBox").innerHTML = `<div class="hint">探测中…（最多 3 个官网页面）</div>`;
+  try {
+    const r = await fetch("/api/resources", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ school, course }),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || "失败");
+    const rows = j.sources.filter(s => s.status !== "link_only").map(s => {
+      const ok = s.status === "ok";
+      const links = (s.links || []).slice(0, 3).map(l =>
+        `<div class="meta">· <a href="${l.url}" target="_blank" rel="noopener">${l.text}</a></div>`).join("");
+      return `<li>
+        <span class="kpname">${s.name}</span>
+        <span class="badge ${ok ? "ok" : "warn"}">${ok ? "可达" : s.status}</span>
+        <span class="meta">可信度 ${s.trust}｜${s.chars} 字｜命中：${(s.matched || []).join("、") || "无"}</span>
+        ${links}</li>`;
+    }).join("");
+    const tb = (j.textbooks || []).length
+      ? `<div class="content">教材线索：${j.textbooks.join("；")}</div>`
+      : `<div class="hint">没在这几个页面里抽到「指定教材」，说明教材信息在附件里——点下面的附件链接去看。</div>`;
+    $("srcBox").innerHTML = `
+      ${j.school_matched ? "" : `<div class="hint" style="color:var(--warn)">${j.school_note}</div>`}
+      <ul class="kps" style="margin-top:8px">${rows}</ul>${tb}`;
+  } catch (err) {
+    $("srcBox").innerHTML = `<div class="err">${err.message}</div>`;
   }
 };
 

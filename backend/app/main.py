@@ -24,7 +24,7 @@ except ImportError:  # 允许没装依赖时做静态检查
     FastAPI = None  # type: ignore[assignment]
 
 from . import course as course_mod
-from . import db, kp_extract, retrieval, tiering, toc
+from . import db, kp_extract, resources, retrieval, tiering, toc
 from .schema import PROFILES, Tier
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -178,6 +178,17 @@ def _build_app() -> None:
             return JSONResponse(_analyze(body.text, body.profile, body.enrich, body.enrich_limit))
         except Exception as exc:  # 解析失败要给出人能看懂的原因
             return JSONResponse({"error": f"分析失败：{exc}"}, status_code=500)
+
+    @app.post("/api/resources")
+    def find_resources(payload: dict) -> JSONResponse:
+        school = str(payload.get("school", "")).strip()
+        course = str(payload.get("course", "")).strip()
+        if not school and not course:
+            return JSONResponse({"error": "至少填学校或课程"}, status_code=400)
+        try:
+            return JSONResponse(resources.discover(school, course))
+        except Exception as exc:
+            return JSONResponse({"error": f"资源发现失败：{exc}"}, status_code=500)
 
     @app.post("/api/ocr")
     async def ocr(file: UploadFile = File(...)) -> JSONResponse:
