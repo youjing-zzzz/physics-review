@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS chapters (
     parent_id  INTEGER REFERENCES chapters(id) ON DELETE CASCADE,
     no         TEXT,      -- 章号/节号：'5' 或 '5.3'
     title      TEXT NOT NULL,
-    level      INTEGER NOT NULL CHECK (level IN (1, 2)),  -- 1=章 2=节
+    level      INTEGER NOT NULL CHECK (level BETWEEN 1 AND 4),  -- 1=章 2=节 3=小节
     page_start INTEGER,
     page_end   INTEGER
 );
