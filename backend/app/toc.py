@@ -17,8 +17,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-# 编号：1 / 2.1 / 2.1.1 / 2.1.1.3，允许全角点与间隔号
-NUM = r"\d{1,2}(?:[.．·・]\d{1,2}){0,3}"
+# 编号：1 / 2.1 / 2.1.1 / 2.1.1.3，允许全角点、间隔号，以及 OCR 常认出的中文逗号
+NUM = r"\d{1,2}(?:[.．·・，,]\d{1,2}){0,3}"
 
 # 行首编号 + 标题。标题允许紧贴编号，也允许有分隔符
 LINE_RE = re.compile(rf"^\s*(?:第\s*)?({NUM})\s*[)）]?\s*[.．·、,，:：\-—\s]*(.+?)\s*$")
@@ -64,8 +64,8 @@ def _level_of(no: str) -> int:
 
 
 def _normalize_no(no: str) -> str:
-    """把全角点、间隔号统一成半角点，并去掉尾部点。"""
-    return re.sub(r"[.．·・]", ".", no).strip(".")
+    """把全角点、间隔号、中文逗号统一成半角点，并去掉尾部点。"""
+    return re.sub(r"[.．·・，,]", ".", no).strip(".")
 
 
 def parse(text: str) -> dict:
@@ -80,7 +80,8 @@ def parse(text: str) -> dict:
     index: dict[str, Node] = {}
     matched = 0
     skipped: list[str] = []
-    pending: str | None = None  # 上一个"只有编号、没有标题"的行
+    pending: list[str] = []  # 连续的"只有编号、没有标题"的行（OCR 常成段输出）
+    pending_chap: list[str] = []  # "只有第X章、没有章名"的行
 
     for ln in lines:
         if NOISE.match(ln) or len(ln) < 3:
@@ -89,7 +90,7 @@ def parse(text: str) -> dict:
         # 编号独占一行：先记下，等下一行的标题来配
         pure = PURE_NO.match(ln)
         if pure:
-            pending = _normalize_no(pure.group(1))
+            pending.append(_normalize_no(pure.group(1)))
             continue
 
         chap = CHAP_RE.match(ln)
@@ -100,17 +101,29 @@ def parse(text: str) -> dict:
             else:
                 # 中文数字：只处理 1-10，够用
                 no = str(CN_NUM.get(raw_no[0], raw_no))
-            node = Node(no=no, title=_clean_title(title) or f"第{no}章", level=1)
+            cleaned = _clean_title(title)
+            if not cleaned:
+                # "第2章" 独占一行时，章名在下一行
+                pending_chap.append(no)
+                continue
+            node = Node(no=no, title=cleaned, level=1)
             roots.append(node)
             index[no] = node
             matched += 1
             continue
 
+        # 优先给"只有第X章"的那行配上章名（必须在编号配对之前判断）
+        if pending_chap and not LINE_RE.match(ln) and re.search(r"[\u4e00-\u9fff]", ln):
+            node = Node(no=pending_chap.pop(0), title=_clean_title(ln), level=1)
+            roots.append(node)
+            index[node.no] = node
+            matched += 1
+            continue
+
         m = LINE_RE.match(ln)
         if not m and pending and re.search(r"[\u4e00-\u9fff]", ln):
-            # 上一行是孤立编号，本行是标题：拼起来再走同一套解析
-            m = LINE_RE.match(f"{pending} {ln}")
-            pending = None
+            # 上一行是孤立编号，本行是标题：拼起来再走同一套解析（按出现顺序取，先进先出）
+            m = LINE_RE.match(f"{pending.pop(0)} {ln}")
         if not m:
             skipped.append(ln)
             continue
