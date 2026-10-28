@@ -22,8 +22,8 @@ NUM = r"\d{1,2}(?:[.．·・，,]\d{1,2}){0,3}"
 
 # 行首编号 + 标题。标题允许紧贴编号，也允许有分隔符
 LINE_RE = re.compile(rf"^\s*(?:第\s*)?({NUM})\s*[)）]?\s*[.．·、,，:：\-—\s]*(.+?)\s*$")
-# "第X章 标题"
-CHAP_RE = re.compile(r"^\s*第\s*([一二三四五六七八九十百\d]+)\s*章\s*(.*)$")
+# "第X章 标题" / "第X节 标题"
+CHAP_RE = re.compile(r"^\s*第\s*([一二三四五六七八九十百\d]+)\s*([章节])\s*(.*)$")
 # 整行只有一个编号（OCR 常把编号与标题拆成两行）
 PURE_NO = re.compile(rf"^\s*({NUM})\s*$")
 # 纯噪声行
@@ -82,6 +82,7 @@ def parse(text: str) -> dict:
     skipped: list[str] = []
     pending: list[str] = []  # 连续的"只有编号、没有标题"的行（OCR 常成段输出）
     pending_chap: list[str] = []  # "只有第X章、没有章名"的行
+    current_chapter: str | None = None  # 供"第X节"挂靠
 
     for ln in lines:
         if NOISE.match(ln) or len(ln) < 3:
@@ -95,19 +96,35 @@ def parse(text: str) -> dict:
 
         chap = CHAP_RE.match(ln)
         if chap:
-            raw_no, title = chap.group(1), chap.group(2)
+            raw_no, unit, title = chap.group(1), chap.group(2), chap.group(3)
             if raw_no.isdigit():
-                no = str(int(raw_no))
+                n = str(int(raw_no))
             else:
-                # 中文数字：只处理 1-10，够用
-                no = str(CN_NUM.get(raw_no[0], raw_no))
+                n = str(CN_NUM.get(raw_no[0], raw_no))
+
+            if unit == "章":
+                no, level = n, 1
+                current_chapter = n
+            else:
+                # 第X节：挂在当前章下面；没有章就单独成节
+                no = f"{current_chapter}.{n}" if current_chapter else n
+                level = 2
+
             cleaned = _clean_title(title)
             if not cleaned:
                 # "第2章" 独占一行时，章名在下一行
                 pending_chap.append(no)
                 continue
-            node = Node(no=no, title=cleaned, level=1)
-            roots.append(node)
+            node = Node(no=no, title=cleaned, level=level)
+            if level == 1:
+                roots.append(node)
+            else:
+                parent = index.get(current_chapter) if current_chapter else None
+                if parent:
+                    node.parent = parent.no
+                    parent.children.append(node)
+                else:
+                    roots.append(node)
             index[no] = node
             matched += 1
             continue

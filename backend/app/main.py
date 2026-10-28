@@ -64,6 +64,22 @@ def _analyze(text: str, profile_key: str) -> dict:
     )
 
     lines = [ln for ln in text.splitlines() if ln.strip()]
+    avg_len = (sum(len(ln) for ln in lines) / len(lines)) if lines else 0
+
+    # 页面类型粗判：目录页的行短、带编号；正文页的行长、是句子
+    if tree["matched"] and not tree["fallback"]:
+        page_type = "toc"
+        hint = ""
+    elif tree["fallback"] and avg_len > 15:
+        page_type = "text"
+        hint = "这看起来是正文页而不是目录页：没有编号且每行较长。请拍教材的目录页（章节列表）"
+    elif tree["fallback"]:
+        page_type = "no-numbers"
+        hint = "没有识别到编号，已按行序编号，请核对顺序是否正确"
+    else:
+        page_type = "unknown"
+        hint = "没有识别到任何目录行，请检查图片是否清晰、是否真的是目录页"
+
     return {
         "tree": tree,
         "course": guess,
@@ -75,7 +91,9 @@ def _analyze(text: str, profile_key: str) -> dict:
             "considered": tree["considered"],
             "matched": tree["matched"],
             "head": lines[:3],
-            "hint": "" if tree["nodes"] else "没有识别到带编号的目录行，请检查图片是否清晰、是否真的是目录页",
+            "page_type": page_type,
+            "avg_line_len": round(avg_len, 1),
+            "hint": hint,
         },
     }
 
