@@ -119,7 +119,7 @@ git config --global http.proxy http://127.0.0.1:7897
 - [ ] D2 教材解析：目录 → 章节 → 页码
 - [ ] D3 知识点切块入库
 - [ ] D4 分层打分算法 + 单测
-- [ ] D5 拍照 → OCR → 章节树
+- [x] D5 拍照 → OCR → 章节树（Windows 自带 OCR，见 `docs/prompts/05`）
 - [ ] D6 三档计划 API
 - [ ] D7 检测题 + 判分
 - [ ] D8 前端单页
