@@ -78,7 +78,9 @@ def _min_tier(kp: dict, profile: dict, score: float, has_stats: bool) -> str | N
 
     # 先验：按类型定档，再按深度上限往后挪；挪不动就排除
     start = TYPE_TIER.get(kp.get("type", "概念"), "60")
-    for t in TIER_ORDER[TIER_ORDER.index(start):]:
+    # 学校越难，保底范围越大：档位整体前移（985 的 50 分档要覆盖更多内容）
+    idx = max(0, TIER_ORDER.index(start) + profile.get("tier_shift", 0))
+    for t in TIER_ORDER[idx:]:
         if _depth_ok(kp, profile, t):
             return t
     return None

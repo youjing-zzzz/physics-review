@@ -30,29 +30,44 @@ class SchoolProfile:
     allow_proof: bool       # 是否出现证明题
     comprehensive: float    # 综合题权重系数
     weight_bias: float      # 真题分值权重偏差
+    tier_shift: int = 0     # 先验定档的整体前移量（越难考的学校，保底范围越大）
 
 
-# 先做两档，D4 再按真实真题分布校准
+# 三档学校画像：档位数字越大 = 要求越高
 PROFILES: dict[str, SchoolProfile] = {
-    "tier1_985": SchoolProfile(
-        key="tier1_985",
-        label="985 / 双一流",
-        depth_cap=4,
-        prereq_cap=4,
-        allow_proof=True,
-        comprehensive=0.35,
-        weight_bias=1.15,
-    ),
-    "tier2_normal": SchoolProfile(
-        key="tier2_normal",
-        label="普通一本 / 二本",
+    "normal": SchoolProfile(
+        key="normal",
+        label="一档 · 普通本科",
         depth_cap=2,
         prereq_cap=2,
         allow_proof=False,
         comprehensive=0.15,
         weight_bias=0.95,
     ),
+    "211": SchoolProfile(
+        key="211",
+        label="二档 · 211",
+        depth_cap=3,
+        prereq_cap=3,
+        allow_proof=False,
+        comprehensive=0.25,
+        weight_bias=1.05,
+    ),
+    "985": SchoolProfile(
+        key="985",
+        label="三档 · 985",
+        depth_cap=4,
+        prereq_cap=4,
+        allow_proof=True,
+        comprehensive=0.35,
+        weight_bias=1.15,
+        tier_shift=-1,
+    ),
 }
+
+# 旧 key 别名，避免已写好的脚本/书签失效
+PROFILES["tier2_normal"] = PROFILES["normal"]
+PROFILES["tier1_985"] = PROFILES["985"]
 
 
 @dataclass
