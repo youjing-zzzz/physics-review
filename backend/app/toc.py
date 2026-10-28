@@ -129,6 +129,10 @@ def parse(text: str) -> dict:
             continue
 
         no, title = _normalize_no(m.group(1)), _clean_title(m.group(2))
+        # 标题以数字开头，说明编号被截断了（如 "985/双一流" 被切成 "98" + "5/…"），丢弃
+        if re.match(r"^\d", title):
+            skipped.append(ln)
+            continue
         # 标题太短或全是符号，视为噪声
         if len(title) < 2 or not re.search(r"[\u4e00-\u9fffA-Za-z]", title):
             skipped.append(ln)
@@ -156,10 +160,31 @@ def parse(text: str) -> dict:
     considered = len([ln for ln in lines if not NOISE.match(ln) and len(ln) >= 3])
     coverage = round(matched / considered, 3) if considered else 0.0
 
+    # 兜底：一个编号都没认出来时，按行序编号。
+    # 真实原因通常是 OCR 把左侧编号列单独切走，只剩标题。
+    fallback = False
+    if not roots and considered >= 3:
+        titles: list[str] = []
+        for ln in lines:
+            if NOISE.match(ln):
+                continue
+            t = _clean_title(ln)
+            if 2 <= len(t) <= 30 and re.search(r"[\u4e00-\u9fff]", t):
+                titles.append(t)
+        if len(titles) >= 2:
+            for i, t in enumerate(titles, start=1):
+                node = Node(no=str(i), title=t, level=2)
+                roots.append(node)
+                index[str(i)] = node
+            matched = len(titles)
+            coverage = round(matched / considered, 3) if considered else 0.0
+            fallback = True
+
     return {
         "nodes": [r.to_dict() for r in roots],
         "coverage": coverage,
         "matched": matched,
         "considered": considered,
+        "fallback": fallback,
         "skipped": skipped[:10],
     }
