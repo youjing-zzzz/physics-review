@@ -1,4 +1,4 @@
-# 一键准备并启动（Windows PowerShell）
+﻿# 一键准备并启动（Windows PowerShell）
 #
 # 目标：任何人 clone 下来，10 分钟内能跑起来。
 # 原则：不写死绝对路径、不改系统环境、失败时给下一步提示。

@@ -1,4 +1,4 @@
-# 每天收工：提交并推送到 GitHub（比赛要求保留细粒度演进历史）
+﻿# 每天收工：提交并推送到 GitHub（比赛要求保留细粒度演进历史）
 #
 # 用法：
 #   powershell -File scripts/daily_push.ps1
