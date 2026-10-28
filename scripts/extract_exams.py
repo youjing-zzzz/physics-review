@@ -29,6 +29,21 @@ OUT = ROOT / "data" / "parsed" / "exams"
 CJK = re.compile(r"[\u4e00-\u9fff]")
 
 
+def clean(text: str) -> str:
+    """去掉公式字体留下的私有区字符和孤立代理项。
+
+    PDF 里的数学符号常用私有区码位（U+E000–U+F8FF）或落单的 UTF-16 代理项，
+    这些东西既不能写盘也不能显示，先剥掉；公式的完整还原是后续 OCR/LLM 的事。
+    """
+    out = []
+    for ch in text:
+        cp = ord(ch)
+        if 0xD800 <= cp <= 0xDFFF or 0xE000 <= cp <= 0xF8FF:
+            continue
+        out.append(ch)
+    return "".join(out)
+
+
 def cjk_ratio(text: str) -> float:
     """中文占比。用来判断抽出来的是正文还是乱码。"""
     if not text:
@@ -45,7 +60,7 @@ def extract(pdf: Path) -> dict:
         except Exception as exc:  # 单页失败不影响整体
             text = ""
             print(f"  ! page {i} 抽取失败: {exc}")
-        pages.append({"page": i, "text": text})
+        pages.append({"page": i, "text": clean(text)})
 
     joined = "\n".join(p["text"] for p in pages)
     chars = len(joined.strip())
